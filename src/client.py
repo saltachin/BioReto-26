@@ -9,8 +9,18 @@ class HttpClient:
         self.host = host
         self.token = token
 
+    # Get data from the challenge
+    def __get_data__(self, endpoint):
+        return requests.get(
+            url=f"{self.host}/api/{endpoint}",
+            headers={
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            }
+        )
+
     # Perform an action upon the colony
-    def __do_action__(self, payload):
+    def __post_action__(self, payload):
         return requests.post(
             url=f"{self.host}/api/equipo/accion",
             data=payload,
@@ -22,7 +32,7 @@ class HttpClient:
 
     # Measure something from the population
     def __do_measure__(self, option):
-        return self.__do_action__(
+        return self.__post_action__(
             payload=json.dumps({"tipo": option})
         )
 
@@ -46,7 +56,7 @@ class HttpClient:
 
     # Update the temperature
     def update_temp(self, increase: bool = False):
-        response = self.__do_action__(
+        response = self.__post_action__(
             payload=json.dumps({
             "tipo": "temperatura", "delta": 1 if increase else -1
         }))
@@ -55,7 +65,7 @@ class HttpClient:
 
     # Update the pH level
     def update_ph(self, increase: bool = False):
-        response = self.__do_action__(
+        response = self.__post_action__(
             payload=json.dumps({
             "tipo": "buffer", "delta": 1 if increase else -1
         }))
@@ -64,7 +74,7 @@ class HttpClient:
 
     # Update the plastic
     def add_plastic(self, x, y):
-        response = self.__do_action__(
+        response = self.__post_action__(
             payload=json.dumps({
             "tipo": "plastico", "x": x, "y": y
         }))
@@ -73,7 +83,7 @@ class HttpClient:
 
     # Filter waste
     def clean(self):
-        response = self.__do_action__(
+        response = self.__post_action__(
             payload=json.dumps({"tipo": "filtrar"}
         ))
         data = json.loads(response.text)
@@ -81,9 +91,48 @@ class HttpClient:
 
     # Revive colony
     def revive(self):
-        response = self.__do_action__(
+        response = self.__post_action__(
             payload=json.dumps({"tipo": "filtrar"}
         ))
         data = json.loads(response.text)
         return data["resultado"]#["filtrado"] #CHANGEME
 
+    # Get log of actions
+    def get_actions(self):
+        response = self.__get_data__(endpoint="equipo/acciones")
+        data = json.loads(response.text)
+        return data
+
+    # Get missions
+    def get_missions(self):
+        response = self.__get_data__(endpoint="equipo/misiones")
+        data = json.loads(response.text)
+        return data
+
+    # Seal a prediction for the challenge
+    def seal_prediction(self, prediction):
+        response = requests.post(
+            url=f"{self.host}/api/equipo/prediccion",
+            data=json.dumps({"prediccion": prediction}),
+            headers={
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            }
+        )
+        data = json.loads(response.text)
+        return data
+
+    # Seal the submittables for the challenge
+    def seal_submittables(self, journal_entry, key_insights, submittable_url):
+        response = requests.post(
+            url=f"{self.host}/api/equipo/entregables",
+            data=json.dumps({
+                "bitacora": journal_entry,
+                "ficha": key_insights,
+                "solucion": submittable_url
+            }),
+            headers={
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            }
+        )
